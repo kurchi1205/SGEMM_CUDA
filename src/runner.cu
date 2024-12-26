@@ -131,6 +131,16 @@ void runCublasFP32(cublasHandle_t handle, int M, int N, int K, float alpha,
                CUBLAS_GEMM_DEFAULT_TENSOR_OP);
 }
 
+void runCublasFP32Batched(cublasHandle_t handle, int Bs, int M, int N, int K, float alpha,
+                   float *A, float *B, float beta, float *C) {
+  // cuBLAS uses column-major order. So we change the order of our row-major A &
+  // B, since (B^T*A^T)^T = (A*B)
+  // This runs cuBLAS in full fp32 mode
+  cublasGemmBatchedEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, B, CUDA_R_32F,
+               N, A, CUDA_R_32F, K, &beta, C, CUDA_R_32F, N, Bs, CUBLAS_COMPUTE_32F,
+               CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+}
+
 void runCublasBF16(cublasHandle_t handle, int M, int N, int K, float alpha,
                    float *A, float *B, float beta, float *C) {
   // This runs cuBLAS with mixed precision (performing the mul with operands
@@ -501,7 +511,7 @@ void runSgemmDoubleBuffering2(int M, int N, int K, float alpha, float *A,
       <<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
 }
 
-void run_kernel(int kernel_num, int M, int N, int K, float alpha, float *A,
+void run_kernel(int kernel_num, int Bs, int M, int N, int K, float alpha, float *A,
                 float *B, float beta, float *C, cublasHandle_t handle) {
   switch (kernel_num) {
   case 0:
@@ -542,6 +552,9 @@ void run_kernel(int kernel_num, int M, int N, int K, float alpha, float *A,
     break;
   case 12:
     runSgemmDoubleBuffering2(M, N, K, alpha, A, B, beta, C);
+    break;
+  case 13:
+    runCublasFP32Batched(handle, Bs, M, N, K, alpha, A, B, beta, C)
     break;
   default:
     throw std::invalid_argument("Unknown kernel number");

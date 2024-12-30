@@ -23,5 +23,8 @@ bool verify_matrix(float *mat1, float *mat2, int N);
 float get_current_sec();                        // Get the current moment
 float cpu_elapsed_time(float &beg, float &end); // Calculate time difference
 
-void run_kernel(int kernel_num, int bs, int m, int n, int k, float alpha, float *A,
+void run_kernel(int kernel_num, int m, int n, int k, float alpha, float *A,
+                float *B, float beta, float *C, cublasHandle_t handle);
+
+void run_kernel_batched(int kernel_num, int bs, int m, int n, int k, float alpha, float *A,
                 float *B, float beta, float *C, float *Aarray[], float *Barray[], float *Carray[], cublasHandle_t handle);

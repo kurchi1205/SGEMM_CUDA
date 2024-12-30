@@ -102,6 +102,30 @@ void print_matrix(const float *A, int M, int N, std::ofstream &fs) {
   fs << "]\n";
 }
 
+void print_matrix_batched(const float *A, int bs, int M, int N, std::ofstream &fs) {
+  fs << std::setprecision(2)
+     << std::fixed; // Set floating-point precision and fixed notation
+
+  for (int b = 0; b < bs; ++b) {
+    fs << "Batch " << b + 1 << ":\n";
+    fs << "[";
+    for (int i = 0; i < M; ++i) {
+      for (int j = 0; j < N; ++j) {
+        int index = b * M * N + i * N + j;
+        fs << std::setw(5) << A[index];
+        if (j < N - 1)
+          fs << ", ";
+      }
+      if (i < M - 1)
+        fs << ";\n";
+    }
+    fs << "]\n";
+    if (b < bs - 1) {
+      fs << "\n"; // Separate batches with an extra newline
+    }
+  }
+}
+
 bool verify_matrix(float *matRef, float *matOut, int N) {
   double diff = 0.0;
   int i;
@@ -132,12 +156,13 @@ void runCublasFP32(cublasHandle_t handle, int M, int N, int K, float alpha,
 }
 
 void runCublasFP32Batched(cublasHandle_t handle, int Bs, int M, int N, int K, float alpha,
-                   float *A, float *B, float beta, float *C) {
+                   float *A[], float *B[], float beta, float *C[]) {
   // cuBLAS uses column-major order. So we change the order of our row-major A &
   // B, since (B^T*A^T)^T = (A*B)
   // This runs cuBLAS in full fp32 mode
-  cublasGemmBatchedEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, B, CUDA_R_32F,
-               N, A, CUDA_R_32F, K, &beta, C, CUDA_R_32F, N, Bs, CUBLAS_COMPUTE_32F,
+  
+  cublasGemmBatchedEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha, (const void **)B, CUDA_R_32F,
+               N, (const void **)A, CUDA_R_32F, K, &beta, (void **)C, CUDA_R_32F, N, Bs, CUBLAS_COMPUTE_32F,
                CUBLAS_GEMM_DEFAULT_TENSOR_OP);
 }
 
@@ -512,7 +537,7 @@ void runSgemmDoubleBuffering2(int M, int N, int K, float alpha, float *A,
 }
 
 void run_kernel(int kernel_num, int Bs, int M, int N, int K, float alpha, float *A,
-                float *B, float beta, float *C, cublasHandle_t handle) {
+                float *B, float beta, float *C, float *Aarray[], float *Barray[], float *Carray[], cublasHandle_t handle) {
   switch (kernel_num) {
   case 0:
     runCublasFP32(handle, M, N, K, alpha, A, B, beta, C);
@@ -554,7 +579,7 @@ void run_kernel(int kernel_num, int Bs, int M, int N, int K, float alpha, float 
     runSgemmDoubleBuffering2(M, N, K, alpha, A, B, beta, C);
     break;
   case 13:
-    runCublasFP32Batched(handle, Bs, M, N, K, alpha, A, B, beta, C)
+    runCublasFP32Batched(handle, Bs, M, N, K, alpha, Aarray, Barray, beta, Carray);
     break;
   default:
     throw std::invalid_argument("Unknown kernel number");

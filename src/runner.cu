@@ -191,6 +191,20 @@ void run_sgemm_naive(int M, int N, int K, float alpha, float *A, float *B,
   sgemm_naive<<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
 }
 
+void run_sgemm_naive_batched(int Bs, int M, int N, int K, float alpha, float *A, float *B,
+                     float beta, float *C) {
+  dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32));
+  dim3 blockDim(32, 32);
+  sgemm_naive_batched<<<gridDim, blockDim>>>(Bs, M, N, K, alpha, A, B, beta, C);
+}
+
+void run_sgemm_naive_batched_v2(int Bs, int M, int N, int K, float alpha, float *A, float *B,
+                     float beta, float *C) {
+  dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 16));
+  dim3 blockDim(32, 16, 2);
+  sgemm_naive_batched_v2<<<gridDim, blockDim>>>(Bs, M, N, K, alpha, A, B, beta, C);
+}
+
 void run_sgemm_coalesce(int M, int N, int K, float alpha, float *A, float *B,
                         float beta, float *C) {
   dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32));
@@ -587,10 +601,10 @@ void run_kernel_batched(int kernel_num, int Bs, int M, int N, int K, float alpha
               float *B, float beta, float *C, float *Aarray[], float *Barray[], float *Carray[], cublasHandle_t handle) {
   switch (kernel_num) {
   case 0:
-    runCublasFP32(handle, M, N, K, alpha, A, B, beta, C);
+    run_sgemm_naive_batched(Bs, M, N, K, alpha, A, B, beta, C);
     break;
   case 1:
-    run_sgemm_naive(M, N, K, alpha, A, B, beta, C);
+    run_sgemm_naive_batched_v2(Bs, M, N, K, alpha, A, B, beta, C);
     break;
   case 2:
     run_sgemm_coalesce(M, N, K, alpha, A, B, beta, C);

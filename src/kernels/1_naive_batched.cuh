@@ -35,7 +35,7 @@ __global__ void sgemm_naive_batched_v2(int Bs, int M, int N, int K, float alpha,
                             const float *B, float beta, float *C) {
   const uint x = blockIdx.x * blockDim.x + threadIdx.x;
   const uint y = blockIdx.y * blockDim.y + threadIdx.y;
-  const uint b = blockIdx.z * blockDim.z + threadIdx.z;
+  const uint b = blockIdx.z;
   // if statement is necessary to make things work under tile quantization
   if (x < M && y < N && b < Bs) {
     float tmp = 0.0;

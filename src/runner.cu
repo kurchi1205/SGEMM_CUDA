@@ -213,6 +213,14 @@ void run_sgemm_coalesce(int M, int N, int K, float alpha, float *A, float *B,
       <<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
 }
 
+void run_sgemm_coalesce_batched(int Bs, int M, int N, int K, float alpha,
+                   float *A[], float *B[], float beta, float *C[]) {
+  dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32), 2);
+  dim3 blockDim(32 * 32);
+  sgemm_global_mem_coalesce_batched<32>
+      <<<gridDim, blockDim>>>(Bs, M, N, K, alpha, (const float **)A, (const float **)B, beta, (float **)C);
+}
+
 void run_sgemm_shared_mem_block(int M, int N, int K, float alpha, float *A,
                                 float *B, float beta, float *C) {
   dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32));
@@ -607,7 +615,7 @@ void run_kernel_batched(int kernel_num, int Bs, int M, int N, int K, float alpha
     run_sgemm_naive_batched_v2(Bs, M, N, K, alpha, A, B, beta, C);
     break;
   case 2:
-    run_sgemm_coalesce(M, N, K, alpha, A, B, beta, C);
+    run_sgemm_coalesce_batched(Bs, M, N, K, alpha, Aarray, Barray, beta, Carray);
     break;
   case 3:
     run_sgemm_shared_mem_block(M, N, K, alpha, A, B, beta, C);
